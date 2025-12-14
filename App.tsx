@@ -169,23 +169,23 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen flex flex-col bg-emerald-950 text-white selection:bg-green-400 selection:text-emerald-950">
+    <div className={`min-h-screen flex flex-col bg-emerald-950 text-white selection:bg-green-400 selection:text-emerald-950 transition-all duration-500 ${isCompetitionMode ? 'border-4 border-amber-500/30' : ''}`}>
       
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-emerald-950/80 backdrop-blur-md border-b border-emerald-800 px-4 py-3 safe-top">
+      <header className={`sticky top-0 z-50 backdrop-blur-md border-b px-4 py-3 safe-top transition-colors duration-300 ${isCompetitionMode ? 'bg-amber-950/80 border-amber-800' : 'bg-emerald-950/80 border-emerald-800'}`}>
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-emerald-900 p-1.5 rounded-full border border-emerald-700 shadow-md">
+            <div className={`p-1.5 rounded-full border shadow-md transition-colors ${isCompetitionMode ? 'bg-amber-900 border-amber-600' : 'bg-emerald-900 border-emerald-700'}`}>
               <ShinyEightBall size={28} />
             </div>
-            <h1 className="text-xl font-bold text-white tracking-wide">
+            <h1 className={`text-xl font-bold tracking-wide ${isCompetitionMode ? 'text-amber-100' : 'text-white'}`}>
               PoolPro
             </h1>
           </div>
           {image && (
             <button 
               onClick={resetApp} 
-              className="p-2 -mr-2 text-emerald-400 hover:text-white transition-colors"
+              className={`p-2 -mr-2 transition-colors ${isCompetitionMode ? 'text-amber-400 hover:text-amber-200' : 'text-emerald-400 hover:text-white'}`}
               aria-label="Reset"
             >
               <RotateCcw size={20} />
@@ -202,7 +202,7 @@ const App: React.FC = () => {
           <div className="flex-1 flex flex-col animate-fade-in">
             <div className="flex-1 flex flex-col justify-center items-center text-center space-y-6 mt-4">
               <div className="relative">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
+                <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full blur-3xl animate-pulse transition-colors duration-500 ${isCompetitionMode ? 'bg-amber-500/20' : 'bg-green-500/20'}`}></div>
                 <ShinyEightBall size={110} className="relative z-10 drop-shadow-2xl" />
               </div>
               
@@ -210,7 +210,7 @@ const App: React.FC = () => {
                 <h2 className="text-4xl font-extrabold text-white tracking-tight">
                   Master the Table
                 </h2>
-                <p className="text-emerald-200/80 text-lg leading-relaxed max-w-xs mx-auto">
+                <p className={`text-lg leading-relaxed max-w-xs mx-auto transition-colors ${isCompetitionMode ? 'text-amber-200/80' : 'text-emerald-200/80'}`}>
                   Instant AI coaching. <br/>Snap a photo, sink more balls.
                 </p>
               </div>
@@ -235,7 +235,7 @@ const App: React.FC = () => {
                   onClick={() => setIsCompetitionMode(true)}
                   className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${
                     isCompetitionMode 
-                      ? 'bg-amber-500 text-slate-900 shadow-md' 
+                      ? 'bg-amber-500 text-slate-900 shadow-md shadow-amber-500/20' 
                       : 'text-emerald-400 hover:text-emerald-200'
                   }`}
                 >
@@ -245,7 +245,7 @@ const App: React.FC = () => {
               </div>
 
               <div>
-                <div className="flex items-center gap-3 text-sm text-green-400 font-bold uppercase tracking-wider mb-2 ml-1">
+                <div className={`flex items-center gap-3 text-sm font-bold uppercase tracking-wider mb-2 ml-1 transition-colors ${isCompetitionMode ? 'text-amber-400' : 'text-green-400'}`}>
                   Step 1: Select Suit
                 </div>
                 <SuitSelector />
@@ -280,7 +280,7 @@ const App: React.FC = () => {
               <div className="pt-2">
                  <Button 
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full h-16 text-xl shadow-amber-500/20"
+                  className={`w-full h-16 text-xl transition-all ${isCompetitionMode ? 'shadow-amber-500/30 border-amber-400/50 bg-amber-500 text-slate-900 hover:bg-amber-400' : 'shadow-amber-500/20'}`}
                   icon={<Camera size={28} />}
                 >
                   Analyze Table
@@ -307,7 +307,7 @@ const App: React.FC = () => {
           <div className="space-y-6 animate-fade-in pb-8">
             
             {/* Image Preview */}
-            <div className="relative rounded-2xl overflow-hidden border border-emerald-700 shadow-2xl bg-emerald-950">
+            <div className={`relative rounded-2xl overflow-hidden border shadow-2xl bg-emerald-950 transition-colors ${isCompetitionMode ? 'border-amber-600/50 shadow-amber-900/20' : 'border-emerald-700'}`}>
               <img 
                 src={image} 
                 alt="Pool Table" 
@@ -318,11 +318,11 @@ const App: React.FC = () => {
               {isAnalyzing && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 p-6 text-center">
                   <div className="relative mb-6">
-                    <div className="absolute inset-0 bg-green-500 blur-2xl opacity-30 animate-pulse rounded-full"></div>
-                    <div className="relative animate-spin rounded-full h-16 w-16 border-4 border-green-500/30 border-t-green-400"></div>
+                    <div className={`absolute inset-0 blur-2xl opacity-30 animate-pulse rounded-full ${isCompetitionMode ? 'bg-amber-500' : 'bg-green-500'}`}></div>
+                    <div className={`relative animate-spin rounded-full h-16 w-16 border-4 ${isCompetitionMode ? 'border-amber-500/30 border-t-amber-400' : 'border-green-500/30 border-t-green-400'}`}></div>
                   </div>
                   <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">Analyzing Table</h3>
-                  <p className="text-green-300 text-sm animate-pulse font-medium uppercase tracking-widest">
+                  <p className={`text-sm animate-pulse font-medium uppercase tracking-widest ${isCompetitionMode ? 'text-amber-300' : 'text-green-300'}`}>
                     {isCompetitionMode ? "Calculating winning line..." : "Reviewing table layout..."}
                   </p>
                 </div>
@@ -374,8 +374,8 @@ const App: React.FC = () => {
                 
                 {/* General Advice */}
                 {result.generalAdvice && (
-                   <div className="bg-emerald-800/40 rounded-xl p-5 border border-emerald-700/50 shadow-sm backdrop-blur-md">
-                      <div className="flex items-center gap-2 mb-3 text-green-400 font-bold uppercase text-xs tracking-wider">
+                   <div className={`rounded-xl p-5 border shadow-sm backdrop-blur-md ${isCompetitionMode ? 'bg-amber-900/20 border-amber-700/50' : 'bg-emerald-800/40 border-emerald-700/50'}`}>
+                      <div className={`flex items-center gap-2 mb-3 font-bold uppercase text-xs tracking-wider ${isCompetitionMode ? 'text-amber-400' : 'text-green-400'}`}>
                         <Settings size={14} /> Coach's Insight
                       </div>
                       <p className="text-emerald-100 leading-relaxed text-sm md:text-base font-medium">{result.generalAdvice}</p>
@@ -386,11 +386,11 @@ const App: React.FC = () => {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between px-1">
                     <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                      <CheckCircle2 size={20} className="text-green-400" />
+                      <CheckCircle2 size={20} className={isCompetitionMode ? "text-amber-400" : "text-green-400"} />
                       Recommended Shots
                     </h3>
                     {result.recommendations[0]?.confidenceScore && (
-                      <span className="text-xs text-emerald-300 font-bold bg-emerald-900/50 border border-emerald-800 px-3 py-1.5 rounded-full uppercase tracking-wider">
+                      <span className={`text-xs font-bold bg-emerald-900/50 border px-3 py-1.5 rounded-full uppercase tracking-wider ${isCompetitionMode ? 'text-amber-300 border-amber-800' : 'text-emerald-300 border-emerald-800'}`}>
                         {result.recommendations[0].confidenceScore}% Confidence
                       </span>
                     )}
