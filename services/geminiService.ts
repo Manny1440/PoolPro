@@ -40,7 +40,8 @@ const responseSchema: Schema = {
 export const analyzePoolTable = async (
   base64Image: string,
   playerSuit: PlayerSuit,
-  hasFoul: boolean
+  hasFoul: boolean,
+  isCompetitionMode: boolean
 ): Promise<PoolAnalysisResponse> => {
   const model = "gemini-2.5-flash"; 
   
@@ -52,8 +53,14 @@ export const analyzePoolTable = async (
   ${hasFoul ? "IMPORTANT: The opponent committed a foul. The player has TWO SHOTS (or ball-in-hand). You should suggest utilizing this advantage to clear difficult balls, break clusters, or play a more aggressive shot since a miss might still leave a second visit." : ""}
   ${playerSuit === PlayerSuit.OPEN ? "The table is open. Suggest the easiest ball to pot to take control of a suit." : `Focus ONLY on potting balls of the '${playerSuit}' suit (or the Black 8-ball if it looks like the suit is cleared).`}
   
+  MODE: ${isCompetitionMode ? "COMPETITION / MATCH PLAY" : "PRACTICE / TRAINING"}
+  
+  ${isCompetitionMode 
+    ? "STRATEGY: The player is in a competitive match. Prioritize HIGH PERCENTAGE shots and SAFETY. Do not suggest risky pots unless confidence is >90%. If a pot is difficult, suggest a safety shot (snooker) or a shot that leaves the opponent in a difficult position. Minimize risk of scratching or selling the table." 
+    : "STRATEGY: The player is practicing. Explain the technique in detail. Feel free to suggest creative or skill-building shots to improve their game."}
+
   Provide detailed shot recommendations.
-  1. Identify the best potting opportunity.
+  1. Identify the best opportunity.
   2. Explain exactly how to play it (aim, spin, power).
   3. Explain the positional play for the NEXT ball.
   
