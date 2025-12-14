@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Camera, RotateCcw, Info, Settings, AlertTriangle, Check, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Camera, RotateCcw, Info, Settings, AlertTriangle, Check, ArrowRight, CheckCircle2, Trophy, GraduationCap } from 'lucide-react';
 import { PlayerSuit, PoolAnalysisResponse } from './types';
 import { analyzePoolTable } from './services/geminiService';
 import { Button } from './components/Button';
@@ -77,6 +77,7 @@ const App: React.FC = () => {
   const [result, setResult] = useState<PoolAnalysisResponse | null>(null);
   const [playerSuit, setPlayerSuit] = useState<PlayerSuit>(PlayerSuit.OPEN);
   const [hasFoul, setHasFoul] = useState(false);
+  const [isCompetitionMode, setIsCompetitionMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -108,7 +109,7 @@ const App: React.FC = () => {
   const analyzeImage = useCallback(async (base64Data: string) => {
     setResult(null);
     try {
-      const analysis = await analyzePoolTable(base64Data, playerSuit, hasFoul);
+      const analysis = await analyzePoolTable(base64Data, playerSuit, hasFoul, isCompetitionMode);
       setResult(analysis);
     } catch (err) {
       setError("Unable to analyze the pool table. Please check your internet connection and try again.");
@@ -116,7 +117,7 @@ const App: React.FC = () => {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [playerSuit, hasFoul]);
+  }, [playerSuit, hasFoul, isCompetitionMode]);
 
   const resetApp = () => {
     setImage(null);
@@ -215,46 +216,68 @@ const App: React.FC = () => {
               </div>
             </div>
             
-            <div className="w-full space-y-8 mt-10 mb-6">
+            <div className="w-full space-y-6 mt-10 mb-6">
+              
+              {/* Game Mode Selector */}
+              <div className="bg-emerald-900/30 p-1.5 rounded-xl flex border border-emerald-800/50">
+                <button
+                  onClick={() => setIsCompetitionMode(false)}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${
+                    !isCompetitionMode 
+                      ? 'bg-emerald-600 text-white shadow-md' 
+                      : 'text-emerald-400 hover:text-emerald-200'
+                  }`}
+                >
+                  <GraduationCap size={16} />
+                  Practice
+                </button>
+                <button
+                  onClick={() => setIsCompetitionMode(true)}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${
+                    isCompetitionMode 
+                      ? 'bg-amber-500 text-slate-900 shadow-md' 
+                      : 'text-emerald-400 hover:text-emerald-200'
+                  }`}
+                >
+                  <Trophy size={16} />
+                  Match Mode
+                </button>
+              </div>
+
               <div>
-                <div className="flex items-center gap-3 text-lg text-green-400 font-bold uppercase tracking-wider mb-4 ml-1">
-                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-900 border border-emerald-700 text-xs text-green-400 font-bold">1</span>
-                  Select your suit
+                <div className="flex items-center gap-3 text-sm text-green-400 font-bold uppercase tracking-wider mb-2 ml-1">
+                  Step 1: Select Suit
                 </div>
                 <SuitSelector />
               </div>
 
               <div>
-                <div className="flex items-center gap-3 text-lg text-green-400 font-bold uppercase tracking-wider mb-4 ml-1">
-                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-900 border border-emerald-700 text-xs text-green-400 font-bold">2</span>
-                  Situation
-                </div>
                 <button
                   onClick={() => setHasFoul(!hasFoul)}
-                  className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all duration-200 group ${
+                  className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all duration-200 group ${
                     hasFoul
                       ? 'bg-red-900/40 border-red-500 text-white shadow-lg shadow-red-900/20'
                       : 'bg-emerald-800/40 border-emerald-700/50 text-emerald-100 hover:bg-emerald-700/50 backdrop-blur-sm'
                   }`}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className={`p-2.5 rounded-lg ${hasFoul ? 'bg-red-500/20' : 'bg-emerald-900/50 border border-emerald-700/50'} transition-colors`}>
-                      <AlertTriangle size={24} className={hasFoul ? "text-red-400" : "text-emerald-500"} />
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${hasFoul ? 'bg-red-500/20' : 'bg-emerald-900/50 border border-emerald-700/50'} transition-colors`}>
+                      <AlertTriangle size={20} className={hasFoul ? "text-red-400" : "text-emerald-500"} />
                     </div>
                     <div className="text-left">
-                      <div className={`font-bold text-lg ${hasFoul ? 'text-red-100' : 'text-emerald-100'}`}>Opponent Fouled</div>
-                      <div className="text-sm opacity-70">I have 2 shots / Ball-in-hand</div>
+                      <div className={`font-bold ${hasFoul ? 'text-red-100' : 'text-emerald-100'}`}>Opponent Fouled</div>
+                      <div className="text-xs opacity-70">I have 2 shots / Ball-in-hand</div>
                     </div>
                   </div>
-                  <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors ${
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
                     hasFoul ? 'border-red-500 bg-red-500 text-white' : 'border-emerald-700 bg-emerald-900/50'
                   }`}>
-                    {hasFoul && <Check size={16} />}
+                    {hasFoul && <Check size={14} />}
                   </div>
                 </button>
               </div>
 
-              <div className="pt-4">
+              <div className="pt-2">
                  <Button 
                   onClick={() => fileInputRef.current?.click()}
                   className="w-full h-16 text-xl shadow-amber-500/20"
@@ -299,7 +322,9 @@ const App: React.FC = () => {
                     <div className="relative animate-spin rounded-full h-16 w-16 border-4 border-green-500/30 border-t-green-400"></div>
                   </div>
                   <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">Analyzing Table</h3>
-                  <p className="text-green-300 text-sm animate-pulse font-medium uppercase tracking-widest">Finding the winning line...</p>
+                  <p className="text-green-300 text-sm animate-pulse font-medium uppercase tracking-widest">
+                    {isCompetitionMode ? "Calculating winning line..." : "Reviewing table layout..."}
+                  </p>
                 </div>
               )}
 
@@ -313,6 +338,13 @@ const App: React.FC = () => {
                   }`}>
                     {playerSuit === PlayerSuit.OPEN ? 'Open Table' : `${playerSuit.toLowerCase()} Suit`}
                   </div>
+                  
+                  {isCompetitionMode && (
+                     <div className="px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500/90 text-slate-900 backdrop-blur-md shadow-lg flex items-center gap-1 border border-white/10">
+                      <Trophy size={12} /> Match Mode
+                    </div>
+                  )}
+
                   {hasFoul && (
                     <div className="px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-red-600/90 text-white backdrop-blur-md shadow-lg flex items-center gap-1 border border-white/10">
                       <AlertTriangle size={12} /> 2 Shots
@@ -355,11 +387,13 @@ const App: React.FC = () => {
                   <div className="flex items-center justify-between px-1">
                     <h3 className="text-xl font-bold text-white flex items-center gap-2">
                       <CheckCircle2 size={20} className="text-green-400" />
-                      Best Shots
+                      Recommended Shots
                     </h3>
-                    <span className="text-xs text-emerald-300 font-bold bg-emerald-900/50 border border-emerald-800 px-3 py-1.5 rounded-full uppercase tracking-wider">
-                      High Confidence
-                    </span>
+                    {result.recommendations[0]?.confidenceScore && (
+                      <span className="text-xs text-emerald-300 font-bold bg-emerald-900/50 border border-emerald-800 px-3 py-1.5 rounded-full uppercase tracking-wider">
+                        {result.recommendations[0].confidenceScore}% Confidence
+                      </span>
+                    )}
                   </div>
                   
                   {result.recommendations.length === 0 ? (
