@@ -9,8 +9,9 @@ export default defineConfig(({ mode }) => {
       'process.env.API_KEY': JSON.stringify(env.API_KEY || process.env.API_KEY)
     },
     build: {
-      outDir: 'dist',
-      sourcemap: false
+      target: 'esnext',
+      minify: 'esbuild',
+      reportCompressedSize: false
     }
   };
 });
