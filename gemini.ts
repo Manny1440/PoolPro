@@ -1,7 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { PlayerSuit, PoolAnalysisResponse } from "./types";
 
-// Fix: Removed Schema type annotation to comply with recommended @google/genai practices
 const responseSchema = {
   type: Type.OBJECT,
   properties: {
@@ -41,51 +40,42 @@ export const analyzePoolTable = async (
   hasFoul: boolean,
   isCompetitionMode: boolean
 ): Promise<PoolAnalysisResponse> => {
-  // Fix: Initialized GoogleGenAI using process.env.API_KEY directly as per SDK requirements
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Use the API key provided via environment variables
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
   const model = "gemini-3-flash-preview"; 
   
   const persona = isCompetitionMode 
-    ? "You are a professional Billiards Coach. Use technical terms like 'tangent lines', 'deflection', and 'safety play'. Be precise and cold."
-    : "You are a friendly, witty Bar Buddy at a local pool hall. Use puns, be encouraging, and keep the advice simple. Act like you're leaning over the table with a drink in your hand.";
+    ? "You are a professional Billiards Coach. Use technical terms like 'tangent lines' and 'deflection'."
+    : "You are a friendly, witty Bar Buddy. Use puns and keep advice simple.";
 
   const promptText = `
     Analyze this pool table image. 
     Player is shooting for: ${playerSuit}.
-    Special State: ${hasFoul ? "The opponent fouled! Tell the player they have ball-in-hand or 2 shots." : "Normal play."}
+    Foul state: ${hasFoul ? "Active foul (2 shots/ball-in-hand)" : "Normal play"}.
     
-    GOAL: Suggest the best 2-3 shots.
+    Personality: ${persona}
     
-    PERSONALITY: ${persona}
-    
-    Identify the white cue ball and the target balls clearly. If the image is a bit blurry, give it your best shot anyway!
-    Return the response in the requested JSON format.
+    Provide a list of 2-3 best shots in JSON format.
   `;
 
-  try {
-    const response = await ai.models.generateContent({
-      model: model,
-      contents: [{
-        parts: [
-          { inlineData: { mimeType: "image/jpeg", data: base64Image } },
-          { text: promptText }
-        ]
-      }],
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: responseSchema,
-        systemInstruction: isCompetitionMode 
-          ? "Master level pool instructor. Focus on physics and run-outs." 
-          : "Fun-loving pool hall regular. Focus on easy wins and good vibes.",
-      }
-    });
+  const response = await ai.models.generateContent({
+    model: model,
+    contents: [{
+      parts: [
+        { inlineData: { mimeType: "image/jpeg", data: base64Image } },
+        { text: promptText }
+      ]
+    }],
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: responseSchema,
+      systemInstruction: isCompetitionMode 
+        ? "Professional pool instructor. Calculated and precise." 
+        : "Encouraging pool hall regular. Friendly and helpful.",
+    }
+  });
 
-    // Fix: Accessed .text property directly as per the latest @google/genai response handling rules
-    const text = response.text;
-    if (!text) throw new Error("Coach is distracted by the jukebox. Try again!");
-    return JSON.parse(text) as PoolAnalysisResponse;
-  } catch (error: any) {
-    console.error("Gemini Error:", error);
-    throw new Error("The table is spinning! Try taking a clearer, steadier photo.");
-  }
+  const text = response.text;
+  if (!text) throw new Error("Analysis failed. Try again!");
+  return JSON.parse(text) as PoolAnalysisResponse;
 };
