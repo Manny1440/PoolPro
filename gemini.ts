@@ -40,42 +40,47 @@ export const analyzePoolTable = async (
   hasFoul: boolean,
   isCompetitionMode: boolean
 ): Promise<PoolAnalysisResponse> => {
-  // Use the API key provided via environment variables
+  // Use a fresh instance with the key from process.env
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
   const model = "gemini-3-flash-preview"; 
   
   const persona = isCompetitionMode 
-    ? "You are a professional Billiards Coach. Use technical terms like 'tangent lines' and 'deflection'."
-    : "You are a friendly, witty Bar Buddy. Use puns and keep advice simple.";
+    ? "You are a professional Billiards Coach. Use technical terms like 'tangent lines' and 'deflection'. Be precise."
+    : "You are a friendly, witty Bar Buddy. Use puns, be encouraging, and keep the advice simple.";
 
   const promptText = `
     Analyze this pool table image. 
     Player is shooting for: ${playerSuit}.
-    Foul state: ${hasFoul ? "Active foul (2 shots/ball-in-hand)" : "Normal play"}.
+    State: ${hasFoul ? "Foul active (2 shots or ball-in-hand)" : "Normal play"}.
     
-    Personality: ${persona}
+    Style: ${persona}
     
-    Provide a list of 2-3 best shots in JSON format.
+    Goal: Identify the best 2-3 shots. Be very specific about where to hit the cue ball (spin) and which part of the pocket to aim for.
   `;
 
-  const response = await ai.models.generateContent({
-    model: model,
-    contents: [{
-      parts: [
-        { inlineData: { mimeType: "image/jpeg", data: base64Image } },
-        { text: promptText }
-      ]
-    }],
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: responseSchema,
-      systemInstruction: isCompetitionMode 
-        ? "Professional pool instructor. Calculated and precise." 
-        : "Encouraging pool hall regular. Friendly and helpful.",
-    }
-  });
+  try {
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: [{
+        parts: [
+          { inlineData: { mimeType: "image/jpeg", data: base64Image } },
+          { text: promptText }
+        ]
+      }],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: responseSchema,
+        systemInstruction: isCompetitionMode 
+          ? "Master level pool instructor. Focus on physics and run-outs." 
+          : "Fun-loving pool hall regular. Focus on easy wins and good vibes.",
+      }
+    });
 
-  const text = response.text;
-  if (!text) throw new Error("Analysis failed. Try again!");
-  return JSON.parse(text) as PoolAnalysisResponse;
+    const text = response.text;
+    if (!text) throw new Error("Coach missed the shot! Try again.");
+    return JSON.parse(text) as PoolAnalysisResponse;
+  } catch (error: any) {
+    console.error("Gemini API Error:", error);
+    throw new Error("Table is a bit fuzzy. Take another photo!");
+  }
 };
