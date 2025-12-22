@@ -1,5 +1,5 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { Camera, RotateCcw, Info, Settings, AlertTriangle, Check, ArrowRight, CheckCircle2, Trophy, GraduationCap } from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { Camera, RotateCcw, Info, Settings, AlertTriangle, Check, ArrowRight, CheckCircle2, Trophy, GraduationCap, Sparkles, Beer, Zap } from 'lucide-react';
 import { PlayerSuit, PoolAnalysisResponse } from './types';
 import { analyzePoolTable } from './services/geminiService';
 import { Button } from './components/Button';
@@ -14,20 +14,19 @@ const compressImage = (file: File): Promise<string> => {
       img.src = event.target?.result as string;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1536; 
-        const MAX_HEIGHT = 1536;
+        const MAX_DIM = 1280; // Faster processing with slightly lower but still high res
         let width = img.width;
         let height = img.height;
 
         if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
+          if (width > MAX_DIM) {
+            height *= MAX_DIM / width;
+            width = MAX_DIM;
           }
         } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
+          if (height > MAX_DIM) {
+            width *= MAX_DIM / height;
+            height = MAX_DIM;
           }
         }
 
@@ -35,13 +34,33 @@ const compressImage = (file: File): Promise<string> => {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.8));
+        resolve(canvas.toDataURL('image/jpeg', 0.75)); // Faster upload
       };
       img.onerror = (error) => reject(error);
     };
     reader.onerror = (error) => reject(error);
   });
 };
+
+const ANALYSIS_STEPS = [
+  "Chalking the cue...",
+  "Eyeballing the angles...",
+  "Checking for table tilt...",
+  "Finding the cue ball...",
+  "Ignoring the jukebox...",
+  "Measuring the pocket...",
+  "Calculating the geometry...",
+  "Visualizing the win..."
+];
+
+const PRO_ANALYSIS_STEPS = [
+  "Initializing spatial grid...",
+  "Mapping vector trajectories...",
+  "Calculating ball deflection...",
+  "Analyzing rail friction...",
+  "Optimizing for run-out...",
+  "Evaluating safety margins..."
+];
 
 const ShinyEightBall = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
   <svg 
@@ -58,14 +77,8 @@ const ShinyEightBall = ({ size = 24, className = "" }: { size?: number, classNam
         <stop offset="0%" stopColor="#555" />
         <stop offset="100%" stopColor="#000" />
       </radialGradient>
-      <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation="2" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-      </filter>
     </defs>
     <circle cx="50" cy="50" r="48" fill="url(#ballGrad)" stroke="#1a1a1a" strokeWidth="1" />
-    <path d="M25 25 Q 50 10 75 25" stroke="white" strokeWidth="3" strokeLinecap="round" opacity="0.15" />
-    <ellipse cx="32" cy="28" rx="12" ry="6" fill="white" opacity="0.1" transform="rotate(-45 32 28)" />
     <circle cx="50" cy="42" r="22" fill="#f8fafc" />
     <text x="50" y="50" dy=".3em" fontSize="28" fontWeight="900" fontFamily="Arial, sans-serif" textAnchor="middle" fill="#000">8</text>
   </svg>
@@ -74,6 +87,7 @@ const ShinyEightBall = ({ size = 24, className = "" }: { size?: number, classNam
 const App: React.FC = () => {
   const [image, setImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisStep, setAnalysisStep] = useState(0);
   const [result, setResult] = useState<PoolAnalysisResponse | null>(null);
   const [playerSuit, setPlayerSuit] = useState<PlayerSuit>(PlayerSuit.OPEN);
   const [hasFoul, setHasFoul] = useState(false);
@@ -81,43 +95,45 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const steps = isCompetitionMode ? PRO_ANALYSIS_STEPS : ANALYSIS_STEPS;
+
+  useEffect(() => {
+    let interval: number;
+    if (isAnalyzing) {
+      interval = window.setInterval(() => {
+        setAnalysisStep((prev) => (prev + 1) % steps.length);
+      }, 1000); // Faster rotations for faster model
+    } else {
+      setAnalysisStep(0);
+    }
+    return () => clearInterval(interval);
+  }, [isAnalyzing, steps.length]);
+
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      setError("Please select a valid image file.");
+      setError("Pick a picture of the table, buddy!");
       return;
     }
 
     try {
       setError(null);
       setIsAnalyzing(true);
-      
       const compressedDataUrl = await compressImage(file);
       const base64Data = compressedDataUrl.split(',')[1];
-      
       setImage(compressedDataUrl);
-      analyzeImage(base64Data);
-    } catch (err) {
-      setError("Failed to process image. Please try again.");
+      
+      const analysis = await analyzePoolTable(base64Data, playerSuit, hasFoul, isCompetitionMode);
+      setResult(analysis);
+      setIsAnalyzing(false);
+    } catch (err: any) {
+      setError(err.message || "Table is too crowded. Try again!");
       setIsAnalyzing(false);
       setImage(null);
     }
   };
-
-  const analyzeImage = useCallback(async (base64Data: string) => {
-    setResult(null);
-    try {
-      const analysis = await analyzePoolTable(base64Data, playerSuit, hasFoul, isCompetitionMode);
-      setResult(analysis);
-    } catch (err) {
-      setError("Unable to analyze the pool table. Please check your internet connection and try again.");
-      console.error(err);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  }, [playerSuit, hasFoul, isCompetitionMode]);
 
   const resetApp = () => {
     setImage(null);
@@ -125,299 +141,154 @@ const App: React.FC = () => {
     setError(null);
     setHasFoul(false);
     setIsAnalyzing(false);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const SuitSelector = () => (
     <div className="grid grid-cols-3 gap-2 mb-4 w-full">
-      <button 
-        onClick={() => setPlayerSuit(PlayerSuit.REDS)}
-        className={`relative py-4 rounded-xl font-bold text-base transition-all duration-200 border-2 ${
-          playerSuit === PlayerSuit.REDS 
-            ? 'bg-red-600 border-red-500 text-white shadow-lg shadow-red-500/30 transform scale-105 z-10' 
-            : 'bg-emerald-800/40 border-emerald-700/50 text-emerald-100 hover:bg-emerald-700/50 backdrop-blur-sm'
-        }`}
-      >
-        Reds
-        {playerSuit === PlayerSuit.REDS && <Check size={18} className="absolute top-1 right-1 text-red-200" />}
-      </button>
-      <button 
-        onClick={() => setPlayerSuit(PlayerSuit.YELLOWS)}
-        className={`relative py-4 rounded-xl font-bold text-base transition-all duration-200 border-2 ${
-          playerSuit === PlayerSuit.YELLOWS 
-            ? 'bg-yellow-400 border-yellow-300 text-black shadow-lg shadow-yellow-500/30 transform scale-105 z-10' 
-            : 'bg-emerald-800/40 border-emerald-700/50 text-emerald-100 hover:bg-emerald-700/50 backdrop-blur-sm'
-        }`}
-      >
-        Yellows
-        {playerSuit === PlayerSuit.YELLOWS && <Check size={18} className="absolute top-1 right-1 text-black/50" />}
-      </button>
-      <button 
-        onClick={() => setPlayerSuit(PlayerSuit.OPEN)}
-        className={`relative py-4 rounded-xl font-bold text-base transition-all duration-200 border-2 ${
-          playerSuit === PlayerSuit.OPEN 
-            ? 'bg-slate-800 border-slate-600 text-white shadow-lg shadow-slate-900/50 transform scale-105 z-10' 
-            : 'bg-emerald-800/40 border-emerald-700/50 text-emerald-100 hover:bg-emerald-700/50 backdrop-blur-sm'
-        }`}
-      >
-        Open
-        {playerSuit === PlayerSuit.OPEN && <Check size={18} className="absolute top-1 right-1 text-slate-300" />}
-      </button>
+      {(Object.keys(PlayerSuit) as Array<keyof typeof PlayerSuit>).map((suit) => (
+        <button 
+          key={suit}
+          onClick={() => setPlayerSuit(PlayerSuit[suit])}
+          className={`relative py-4 rounded-xl font-bold text-base transition-all duration-200 border-2 ${
+            playerSuit === PlayerSuit[suit] 
+              ? isCompetitionMode ? 'bg-amber-600 border-amber-400 text-white shadow-lg' : 'bg-emerald-600 border-emerald-400 text-white shadow-lg'
+              : 'bg-emerald-800/20 border-emerald-800/40 text-emerald-100 hover:bg-emerald-700/30 backdrop-blur-sm'
+          }`}
+        >
+          {suit === 'OPEN' ? 'Any Ball' : suit.charAt(0) + suit.slice(1).toLowerCase()}
+          {playerSuit === PlayerSuit[suit] && <Check size={16} className="absolute top-1 right-1" />}
+        </button>
+      ))}
     </div>
   );
 
   return (
-    <div className={`min-h-screen flex flex-col bg-emerald-950 text-white selection:bg-green-400 selection:text-emerald-950 transition-all duration-500 ${isCompetitionMode ? 'border-4 border-amber-500/30' : ''}`}>
+    <div className={`min-h-screen flex flex-col bg-emerald-950 text-white selection:bg-green-400 selection:text-emerald-950 transition-all duration-500`}>
       
-      {/* Header */}
       <header className={`sticky top-0 z-50 backdrop-blur-md border-b px-4 py-3 safe-top transition-colors duration-300 ${isCompetitionMode ? 'bg-amber-950/80 border-amber-800' : 'bg-emerald-950/80 border-emerald-800'}`}>
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`p-1.5 rounded-full border shadow-md transition-colors ${isCompetitionMode ? 'bg-amber-900 border-amber-600' : 'bg-emerald-900 border-emerald-700'}`}>
-              <ShinyEightBall size={28} />
-            </div>
-            <h1 className={`text-xl font-bold tracking-wide ${isCompetitionMode ? 'text-amber-100' : 'text-white'}`}>
-              PoolPro
-            </h1>
+            <ShinyEightBall size={32} />
+            <h1 className="text-xl font-bold tracking-tight">PoolPro <span className={`text-[10px] uppercase font-black px-1.5 py-0.5 rounded ml-1 ${isCompetitionMode ? 'bg-amber-500 text-black' : 'bg-emerald-500 text-white'}`}>
+              {isCompetitionMode ? 'Match' : 'Relaxed'}
+            </span></h1>
           </div>
           {image && (
-            <button 
-              onClick={resetApp} 
-              className={`p-2 -mr-2 transition-colors ${isCompetitionMode ? 'text-amber-400 hover:text-amber-200' : 'text-emerald-400 hover:text-white'}`}
-              aria-label="Reset"
-            >
+            <button onClick={resetApp} className="p-2 text-emerald-400 hover:text-white transition-colors">
               <RotateCcw size={20} />
             </button>
           )}
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-md mx-auto w-full p-4 flex flex-col pb-safe">
-        
-        {/* State: Initial */}
-        {!image && (
+      <main className="flex-1 max-w-md mx-auto w-full p-4 flex flex-col">
+        {!image ? (
           <div className="flex-1 flex flex-col animate-fade-in">
-            <div className="flex-1 flex flex-col justify-center items-center text-center space-y-6 mt-4">
-              <div className="relative">
-                <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full blur-3xl animate-pulse transition-colors duration-500 ${isCompetitionMode ? 'bg-amber-500/20' : 'bg-green-500/20'}`}></div>
-                <ShinyEightBall size={110} className="relative z-10 drop-shadow-2xl" />
+            <div className="flex-1 flex flex-col justify-center items-center text-center space-y-6 py-8">
+              <div className="relative group">
+                <div className={`absolute inset-0 blur-3xl opacity-30 transition-colors duration-700 ${isCompetitionMode ? 'bg-amber-500' : 'bg-green-500'}`}></div>
+                <ShinyEightBall size={120} className="relative z-10 drop-shadow-[0_20px_40px_rgba(0,0,0,0.5)] group-hover:rotate-12 transition-transform duration-500" />
+                {!isCompetitionMode && <Beer size={32} className="absolute -bottom-4 -right-4 text-amber-400 animate-bounce" />}
               </div>
               
-              <div className="space-y-3">
-                <h2 className="text-4xl font-extrabold text-white tracking-tight">
-                  Master the Table
-                </h2>
-                <p className={`text-lg leading-relaxed max-w-xs mx-auto transition-colors ${isCompetitionMode ? 'text-amber-200/80' : 'text-emerald-200/80'}`}>
-                  Instant AI coaching. <br/>Snap a photo, sink more balls.
-                </p>
+              <div className="space-y-1">
+                <h2 className="text-3xl font-black text-white">{isCompetitionMode ? "Analyze Position" : "Wanna win?"}</h2>
+                <p className="text-emerald-200/60 font-medium">{isCompetitionMode ? "Vector analysis active" : "I'll spot the best shots for ya!"}</p>
               </div>
             </div>
             
-            <div className="w-full space-y-6 mt-10 mb-6">
-              
-              {/* Game Mode Selector */}
-              <div className="bg-emerald-900/30 p-1.5 rounded-xl flex border border-emerald-800/50">
+            <div className="space-y-4 mb-6">
+              <div className="bg-emerald-900/30 p-1 rounded-xl flex border border-emerald-800/50">
                 <button
                   onClick={() => setIsCompetitionMode(false)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${
-                    !isCompetitionMode 
-                      ? 'bg-emerald-600 text-white shadow-md' 
-                      : 'text-emerald-400 hover:text-emerald-200'
-                  }`}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${!isCompetitionMode ? 'bg-emerald-600 shadow-lg' : 'text-emerald-400'}`}
                 >
-                  <GraduationCap size={16} />
-                  Practice
+                  <Beer size={16} /> Relaxed
                 </button>
                 <button
                   onClick={() => setIsCompetitionMode(true)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${
-                    isCompetitionMode 
-                      ? 'bg-amber-500 text-slate-900 shadow-md shadow-amber-500/20' 
-                      : 'text-emerald-400 hover:text-emerald-200'
-                  }`}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${isCompetitionMode ? 'bg-amber-500 text-slate-900 shadow-lg' : 'text-emerald-400'}`}
                 >
-                  <Trophy size={16} />
-                  Match Mode
+                  <Trophy size={16} /> Match
                 </button>
               </div>
 
-              <div>
-                <div className={`flex items-center gap-3 text-sm font-bold uppercase tracking-wider mb-2 ml-1 transition-colors ${isCompetitionMode ? 'text-amber-400' : 'text-green-400'}`}>
-                  Step 1: Select Suit
-                </div>
+              <div className="space-y-4">
                 <SuitSelector />
-              </div>
-
-              <div>
-                <button
-                  onClick={() => setHasFoul(!hasFoul)}
-                  className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all duration-200 group ${
-                    hasFoul
-                      ? 'bg-red-900/40 border-red-500 text-white shadow-lg shadow-red-900/20'
-                      : 'bg-emerald-800/40 border-emerald-700/50 text-emerald-100 hover:bg-emerald-700/50 backdrop-blur-sm'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${hasFoul ? 'bg-red-500/20' : 'bg-emerald-900/50 border border-emerald-700/50'} transition-colors`}>
-                      <AlertTriangle size={20} className={hasFoul ? "text-red-400" : "text-emerald-500"} />
-                    </div>
-                    <div className="text-left">
-                      <div className={`font-bold ${hasFoul ? 'text-red-100' : 'text-emerald-100'}`}>Opponent Fouled</div>
-                      <div className="text-xs opacity-70">I have 2 shots / Ball-in-hand</div>
-                    </div>
-                  </div>
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                    hasFoul ? 'border-red-500 bg-red-500 text-white' : 'border-emerald-700 bg-emerald-900/50'
-                  }`}>
-                    {hasFoul && <Check size={14} />}
-                  </div>
-                </button>
-              </div>
-
-              <div className="pt-2">
-                 <Button 
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`w-full h-16 text-xl transition-all ${isCompetitionMode ? 'shadow-amber-500/30 border-amber-400/50 bg-amber-500 text-slate-900 hover:bg-amber-400' : 'shadow-amber-500/20'}`}
-                  icon={<Camera size={28} />}
-                >
-                  Analyze Table
-                </Button>
-                <p className="text-center text-xs text-emerald-400/50 mt-3 uppercase tracking-widest font-medium">
-                  Upload a clear photo of the entire table
-                </p>
-                
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                />
+                <div className="grid grid-cols-2 gap-3">
+                   <button
+                    onClick={() => setHasFoul(!hasFoul)}
+                    className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all ${hasFoul ? 'bg-red-900/30 border-red-500 shadow-lg' : 'bg-emerald-900/20 border-emerald-800/40'}`}
+                  >
+                    <Zap size={18} className={hasFoul ? "text-red-400" : "text-emerald-600"} />
+                    <span className="text-sm font-bold">2 Shots</span>
+                  </button>
+                  <Button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="h-14 font-black"
+                    variant={isCompetitionMode ? 'primary' : 'secondary'}
+                    icon={<Camera size={20} />}
+                  >
+                    Go!
+                  </Button>
+                </div>
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" capture="environment" className="hidden" />
               </div>
             </div>
           </div>
-        )}
-
-        {/* State: Image Selected / Analyzing / Result */}
-        {image && (
-          <div className="space-y-6 animate-fade-in pb-8">
-            
-            {/* Image Preview */}
-            <div className={`relative rounded-2xl overflow-hidden border shadow-2xl bg-emerald-950 transition-colors ${isCompetitionMode ? 'border-amber-600/50 shadow-amber-900/20' : 'border-emerald-700'}`}>
-              <img 
-                src={image} 
-                alt="Pool Table" 
-                className={`w-full h-auto max-h-[50vh] object-contain mx-auto transition-opacity duration-500 ${isAnalyzing ? 'opacity-30 blur-sm' : 'opacity-100'}`} 
-              />
+        ) : (
+          <div className="space-y-6 animate-fade-in pb-10">
+            <div className="relative rounded-2xl overflow-hidden border-2 border-emerald-800/50 shadow-2xl bg-black">
+              <img src={image} alt="Pool Table" className={`w-full h-auto max-h-[40vh] object-contain mx-auto transition-all duration-300 ${isAnalyzing ? 'opacity-30 blur-sm' : 'opacity-100'}`} />
               
-              {/* Analyzing Overlay */}
               {isAnalyzing && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 p-6 text-center">
-                  <div className="relative mb-6">
-                    <div className={`absolute inset-0 blur-2xl opacity-30 animate-pulse rounded-full ${isCompetitionMode ? 'bg-amber-500' : 'bg-green-500'}`}></div>
-                    <div className={`relative animate-spin rounded-full h-16 w-16 border-4 ${isCompetitionMode ? 'border-amber-500/30 border-t-amber-400' : 'border-green-500/30 border-t-green-400'}`}></div>
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+                  <div className="mb-4 relative">
+                    <div className="h-16 w-16 rounded-full border-4 border-emerald-500/10 border-t-emerald-400 animate-spin"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Sparkles size={24} className="text-amber-400 animate-pulse" />
+                    </div>
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">Analyzing Table</h3>
-                  <p className={`text-sm animate-pulse font-medium uppercase tracking-widest ${isCompetitionMode ? 'text-amber-300' : 'text-green-300'}`}>
-                    {isCompetitionMode ? "Calculating winning line..." : "Reviewing table layout..."}
+                  <p className="text-white text-lg font-black tracking-tight mb-1">
+                    {steps[analysisStep]}
                   </p>
-                </div>
-              )}
-
-              {/* Status Badges */}
-              {!isAnalyzing && (
-                <div className="absolute top-3 left-3 flex flex-col gap-2">
-                  <div className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-md shadow-lg border border-white/10 ${
-                    playerSuit === PlayerSuit.REDS ? 'bg-red-600/90 text-white' :
-                    playerSuit === PlayerSuit.YELLOWS ? 'bg-yellow-400/90 text-black' :
-                    'bg-slate-900/90 text-white'
-                  }`}>
-                    {playerSuit === PlayerSuit.OPEN ? 'Open Table' : `${playerSuit.toLowerCase()} Suit`}
-                  </div>
-                  
-                  {isCompetitionMode && (
-                     <div className="px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500/90 text-slate-900 backdrop-blur-md shadow-lg flex items-center gap-1 border border-white/10">
-                      <Trophy size={12} /> Match Mode
-                    </div>
-                  )}
-
-                  {hasFoul && (
-                    <div className="px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-red-600/90 text-white backdrop-blur-md shadow-lg flex items-center gap-1 border border-white/10">
-                      <AlertTriangle size={12} /> 2 Shots
-                    </div>
-                  )}
+                  <p className="text-emerald-400 text-[10px] uppercase tracking-widest font-bold opacity-60">
+                    Flash Engine Active
+                  </p>
                 </div>
               )}
             </div>
 
-            {/* Error Message */}
             {error && (
-              <div className="bg-red-900/20 border border-red-800/50 rounded-xl p-4 text-red-200 flex items-start gap-3 animate-fade-in">
-                <Info className="shrink-0 mt-0.5 text-red-500" size={18} />
-                <div className="flex-1">
-                  <p className="font-bold">Analysis Failed</p>
-                  <p className="text-sm opacity-80 mt-1">{error}</p>
-                </div>
-                <button onClick={resetApp} className="text-sm bg-red-900/50 border border-red-700 hover:bg-red-900 px-3 py-1 rounded-lg transition-colors text-white">
-                  Retry
-                </button>
+              <div className="bg-red-900/20 border border-red-800/50 rounded-xl p-4 text-red-200 flex items-center gap-4">
+                <AlertTriangle className="text-red-500 shrink-0" size={24} />
+                <div className="flex-1 text-sm font-medium">{error}</div>
+                <button onClick={resetApp} className="p-2 hover:bg-red-500/20 rounded-lg"><RotateCcw size={18} /></button>
               </div>
             )}
 
-            {/* Analysis Results */}
             {!isAnalyzing && result && (
-              <div className="space-y-6 animate-fade-in delay-100">
-                
-                {/* General Advice */}
-                {result.generalAdvice && (
-                   <div className={`rounded-xl p-5 border shadow-sm backdrop-blur-md ${isCompetitionMode ? 'bg-amber-900/20 border-amber-700/50' : 'bg-emerald-800/40 border-emerald-700/50'}`}>
-                      <div className={`flex items-center gap-2 mb-3 font-bold uppercase text-xs tracking-wider ${isCompetitionMode ? 'text-amber-400' : 'text-green-400'}`}>
-                        <Settings size={14} /> Coach's Insight
-                      </div>
-                      <p className="text-emerald-100 leading-relaxed text-sm md:text-base font-medium">{result.generalAdvice}</p>
-                   </div>
-                )}
-
-                {/* Recommendations */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between px-1">
-                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                      <CheckCircle2 size={20} className={isCompetitionMode ? "text-amber-400" : "text-green-400"} />
-                      Recommended Shots
-                    </h3>
-                    {result.recommendations[0]?.confidenceScore && (
-                      <span className={`text-xs font-bold bg-emerald-900/50 border px-3 py-1.5 rounded-full uppercase tracking-wider ${isCompetitionMode ? 'text-amber-300 border-amber-800' : 'text-emerald-300 border-emerald-800'}`}>
-                        {result.recommendations[0].confidenceScore}% Confidence
-                      </span>
-                    )}
+              <div className="space-y-5">
+                <div className="bg-emerald-900/30 border border-emerald-800/50 rounded-2xl p-5 backdrop-blur-sm relative overflow-hidden">
+                  <div className="absolute -right-4 -top-4 opacity-10">
+                    <Sparkles size={80} />
                   </div>
-                  
-                  {result.recommendations.length === 0 ? (
-                    <div className="text-center bg-emerald-900/20 rounded-xl border border-emerald-800 p-8">
-                      <p className="text-emerald-400 mb-2 font-medium">No clear shots found.</p>
-                      <p className="text-emerald-600/70 text-sm">Try taking a photo from a higher angle or different lighting.</p>
-                    </div>
-                  ) : (
-                    result.recommendations.map((shot, idx) => (
-                      <ShotCard key={idx} shot={shot} rank={idx} />
-                    ))
-                  )}
+                  <div className="flex items-center gap-2 mb-2 text-amber-400 text-[10px] font-black uppercase tracking-widest">
+                    <Zap size={14} /> The {isCompetitionMode ? 'Strategy' : 'Scoop'}
+                  </div>
+                  <p className="text-white text-base leading-snug font-semibold">{result.generalAdvice}</p>
                 </div>
 
-                <div className="pt-4">
-                  <Button 
-                    onClick={resetApp} 
-                    variant="secondary" 
-                    className="w-full py-4"
-                    icon={<RotateCcw size={18} />}
-                  >
-                    Analyze New Table
-                  </Button>
+                <div className="space-y-4">
+                  {result.recommendations.map((shot, idx) => (
+                    <ShotCard key={idx} shot={shot} rank={idx} />
+                  ))}
                 </div>
+
+                <Button onClick={resetApp} variant="ghost" className="w-full text-emerald-400" icon={<RotateCcw size={18} />}>
+                  Try another snap
+                </Button>
               </div>
             )}
           </div>
