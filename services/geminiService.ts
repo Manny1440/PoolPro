@@ -1,8 +1,6 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { PlayerSuit, PoolAnalysisResponse } from "../types";
 
-const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 const responseSchema: Schema = {
   type: Type.OBJECT,
   properties: {
@@ -43,7 +41,9 @@ export const analyzePoolTable = async (
   hasFoul: boolean,
   isCompetitionMode: boolean
 ): Promise<PoolAnalysisResponse> => {
-  const model = "gemini-2.5-flash"; 
+  // Use a fresh instance of GoogleGenAI to ensure current API key is used
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const model = "gemini-3-flash-preview"; 
   
   let promptText = `Analyze this 8-ball pool table image. 
   You are a world-class professional pool coach assisting a player.
@@ -68,14 +68,14 @@ export const analyzePoolTable = async (
   `;
 
   try {
-    const response = await genAI.models.generateContent({
+    const response = await ai.models.generateContent({
       model: model,
-      contents: {
+      contents: [{
         parts: [
           { inlineData: { mimeType: "image/jpeg", data: base64Image } },
           { text: promptText }
         ]
-      },
+      }],
       config: {
         responseMimeType: "application/json",
         responseSchema: responseSchema,
