@@ -1,7 +1,7 @@
 {
   "name": "pool-pro",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,15 +10,15 @@
   },
   "dependencies": {
     "@google/genai": "^0.21.0",
-    "lucide-react": "^0.344.0",
+    "lucide-react": "^0.446.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.2.1",
-    "typescript": "^5.4.5",
-    "vite": "^5.2.0"
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2"
   }
 }
