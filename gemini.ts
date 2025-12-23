@@ -40,20 +40,18 @@ export const analyzePoolTable = async (
   hasFoul: boolean,
   isCompetitionMode: boolean
 ): Promise<PoolAnalysisResponse> => {
-  // Named parameter initialization for the new SDK
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  // Use named parameter as required by the latest SDK
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
   const model = "gemini-3-flash-preview"; 
   
   const persona = isCompetitionMode 
-    ? "You are a professional Billiards Coach. Use technical terms like 'tangent lines' and 'deflection'."
-    : "You are a friendly Bar Buddy. Use puns and keep advice simple.";
+    ? "Master Billiards Coach. Use technical terms like 'tangent lines'."
+    : "Friendly Pool Hall Buddy. Punny and encouraging.";
 
   const promptText = `
-    Analyze this pool table image. 
-    Player is shooting for: ${playerSuit}.
-    State: ${hasFoul ? "Active foul" : "Normal play"}.
-    Style: ${persona}
-    Provide 2-3 specific shot recommendations in JSON format.
+    Analyze this pool table. Player is: ${playerSuit}.
+    Foul state: ${hasFoul ? "Active" : "Normal"}.
+    Provide 2-3 shot suggestions in the specified JSON format.
   `;
 
   try {
@@ -72,10 +70,10 @@ export const analyzePoolTable = async (
     });
 
     const text = response.text;
-    if (!text) throw new Error("Empty response from AI");
+    if (!text) throw new Error("Coach missed the shot. Try another photo.");
     return JSON.parse(text) as PoolAnalysisResponse;
   } catch (error: any) {
     console.error("Gemini Error:", error);
-    throw new Error("Analysis failed. Try taking a steadier photo.");
+    throw new Error("Table analysis failed. Check your lighting!");
   }
 };
