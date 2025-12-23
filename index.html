@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" content="#064e3b" />
+    <meta name="theme-color" content="#022c22" />
     <link rel="manifest" href="manifest.json" />
     <title>PoolPro AI | Professional Billiards Coach</title>
     <!-- Fonts -->
@@ -37,22 +37,17 @@
         padding: 0;
         -webkit-tap-highlight-color: transparent;
         font-family: 'Lexend', sans-serif;
+        color: white;
       }
       #root {
         min-height: 100vh;
       }
-      /* Custom scrollbar for a pro feel */
-      ::-webkit-scrollbar { width: 6px; }
-      ::-webkit-scrollbar-track { background: #022c22; }
-      ::-webkit-scrollbar-thumb { background: #065f46; border-radius: 10px; }
-      
       .glass {
         background: rgba(255, 255, 255, 0.03);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         border: 1px solid rgba(255, 255, 255, 0.1);
       }
-      
       @keyframes slideUp {
         from { transform: translateY(20px); opacity: 0; }
         to { transform: translateY(0); opacity: 1; }
