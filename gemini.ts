@@ -40,22 +40,20 @@ export const analyzePoolTable = async (
   hasFoul: boolean,
   isCompetitionMode: boolean
 ): Promise<PoolAnalysisResponse> => {
-  // Use a fresh instance with the key from process.env
+  // Named parameter initialization for the new SDK
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
   const model = "gemini-3-flash-preview"; 
   
   const persona = isCompetitionMode 
-    ? "You are a professional Billiards Coach. Use technical terms like 'tangent lines' and 'deflection'. Be precise."
-    : "You are a friendly, witty Bar Buddy. Use puns, be encouraging, and keep the advice simple.";
+    ? "You are a professional Billiards Coach. Use technical terms like 'tangent lines' and 'deflection'."
+    : "You are a friendly Bar Buddy. Use puns and keep advice simple.";
 
   const promptText = `
     Analyze this pool table image. 
     Player is shooting for: ${playerSuit}.
-    State: ${hasFoul ? "Foul active (2 shots or ball-in-hand)" : "Normal play"}.
-    
+    State: ${hasFoul ? "Active foul" : "Normal play"}.
     Style: ${persona}
-    
-    Goal: Identify the best 2-3 shots. Be very specific about where to hit the cue ball (spin) and which part of the pocket to aim for.
+    Provide 2-3 specific shot recommendations in JSON format.
   `;
 
   try {
@@ -70,17 +68,14 @@ export const analyzePoolTable = async (
       config: {
         responseMimeType: "application/json",
         responseSchema: responseSchema,
-        systemInstruction: isCompetitionMode 
-          ? "Master level pool instructor. Focus on physics and run-outs." 
-          : "Fun-loving pool hall regular. Focus on easy wins and good vibes.",
       }
     });
 
     const text = response.text;
-    if (!text) throw new Error("Coach missed the shot! Try again.");
+    if (!text) throw new Error("Empty response from AI");
     return JSON.parse(text) as PoolAnalysisResponse;
   } catch (error: any) {
-    console.error("Gemini API Error:", error);
-    throw new Error("Table is a bit fuzzy. Take another photo!");
+    console.error("Gemini Error:", error);
+    throw new Error("Analysis failed. Try taking a steadier photo.");
   }
 };
