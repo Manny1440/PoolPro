@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Camera, RotateCcw, AlertTriangle, Sparkles, Zap, Navigation, Trophy, ChevronRight, Target, AlertCircle, Beer } from 'lucide-react';
+import { Camera, RotateCcw, AlertTriangle, Sparkles, Zap, Navigation, Trophy, ChevronRight, Target, AlertCircle, Beer, ShoppingBag, Heart } from 'lucide-react';
 import { PlayerSuit, PoolAnalysisResponse, ShotRecommendation } from './types';
 import { analyzePoolTable } from './gemini';
 
@@ -17,6 +17,7 @@ const Button = ({ children, variant = 'primary', isLoading, icon, className = ''
   const variants: any = {
     primary: "bg-gradient-to-b from-amber-400 to-amber-500 text-slate-950 shadow-[0_10px_30px_-5px_rgba(245,158,11,0.4)] active:translate-y-0.5 active:shadow-none hover:from-amber-300 hover:to-amber-400 border-t border-white/20",
     secondary: "bg-emerald-800/40 hover:bg-emerald-700/50 text-emerald-100 border border-emerald-600/30 backdrop-blur-md shadow-lg",
+    pro: "bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-xl hover:opacity-90 active:scale-95"
   };
   return (
     <button 
@@ -139,7 +140,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-emerald-950 text-white font-sans selection:bg-amber-500/30 overflow-x-hidden">
-      <header className="sticky top-0 z-[100] px-6 py-6 flex justify-between items-center glass border-b border-white/10 shadow-2xl">
+      <header className="sticky top-0 z-[100] px-6 py-6 flex justify-between items-center glass shadow-2xl">
         <div className="flex items-center gap-4">
           <ShinyEightBall size={46} />
           <div>
@@ -267,7 +268,24 @@ export default function App() {
                   ))}
                 </div>
 
-                <Button onClick={reset} variant="secondary" className="w-full py-7" icon={<RotateCcw size={22} />}>New Table Scan</Button>
+                {/* Monetization Placeholder: Affiliate or Sponsor */}
+                <div className="bg-slate-900/40 p-8 rounded-[2.5rem] border border-white/5 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <ShoppingBag size={20} className="text-amber-400" />
+                    <h5 className="font-black text-sm uppercase tracking-widest text-slate-300">Coach's Gear</h5>
+                  </div>
+                  <p className="text-slate-400 text-xs font-medium">Missed that last one? A better cue might help. Check out the pros' favorites.</p>
+                  <button className="w-full py-4 bg-white/5 border border-white/10 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+                    Browse Pro Gear <ChevronRight size={14} />
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-4">
+                   <Button onClick={reset} variant="secondary" className="w-full py-7" icon={<RotateCcw size={22} />}>New Table Scan</Button>
+                   <button className="flex items-center justify-center gap-2 text-emerald-500/60 font-black text-[10px] uppercase tracking-widest hover:text-emerald-400 transition-all">
+                     <Heart size={12} fill="currentColor" /> Support the Coach
+                   </button>
+                </div>
               </div>
             )}
           </div>
