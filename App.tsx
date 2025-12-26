@@ -1,7 +1,41 @@
 import React, { useState, useRef } from 'react';
-import { Camera, RotateCcw, AlertTriangle, Sparkles, Zap, Navigation, Trophy, ChevronRight, Target, AlertCircle, Beer, ShoppingBag, Heart } from 'lucide-react';
+import { Camera, RotateCcw, AlertTriangle, Sparkles, Zap, Navigation, Trophy, ChevronRight, Target, Beer, ShoppingBag, Heart, X, CreditCard, Clock } from 'lucide-react';
 import { PlayerSuit, PoolAnalysisResponse, ShotRecommendation } from './types';
 import { analyzePoolTable } from './gemini';
+
+// Helper to compress image before upload
+const compressImage = (dataUrl: string): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 1024;
+      const MAX_HEIGHT = 1024;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+      } else {
+        if (height > MAX_HEIGHT) {
+          width *= MAX_HEIGHT / height;
+          height = MAX_HEIGHT;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, width, height);
+      // Quality 0.7 is perfect for AI vision but tiny file size
+      resolve(canvas.toDataURL('image/jpeg', 0.7).split(',')[1]);
+    };
+    img.src = dataUrl;
+  });
+};
 
 const ShinyEightBall = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
   <div className={`relative flex items-center justify-center shrink-0 ${className}`} style={{ width: size, height: size }}>
@@ -15,9 +49,9 @@ const ShinyEightBall = ({ size = 24, className = "" }: { size?: number, classNam
 
 const Button = ({ children, variant = 'primary', isLoading, icon, className = '', ...props }: any) => {
   const variants: any = {
-    primary: "bg-gradient-to-b from-amber-400 to-amber-500 text-slate-950 shadow-[0_10px_30px_-5px_rgba(245,158,11,0.4)] active:translate-y-0.5 active:shadow-none hover:from-amber-300 hover:to-amber-400 border-t border-white/20",
-    secondary: "bg-emerald-800/40 hover:bg-emerald-700/50 text-emerald-100 border border-emerald-600/30 backdrop-blur-md shadow-lg",
-    pro: "bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-xl hover:opacity-90 active:scale-95"
+    primary: "bg-gradient-to-b from-amber-400 to-amber-500 text-slate-950 shadow-lg active:translate-y-0.5 active:shadow-none border-t border-white/20",
+    secondary: "bg-emerald-800/40 hover:bg-emerald-700/50 text-emerald-100 border border-emerald-600/30 backdrop-blur-md",
+    pro: "bg-gradient-to-r from-purple-600 to-blue-600 text-white"
   };
   return (
     <button 
@@ -38,61 +72,60 @@ const ShotCard = ({ shot, rank }: { shot: ShotRecommendation, rank: number }) =>
   
   const getBallStyle = (color: string) => {
     const c = color.toLowerCase();
-    if (c.includes('red')) return 'bg-red-600 shadow-[0_10px_20px_-5px_rgba(220,38,38,0.5)]';
-    if (c.includes('yellow')) return 'bg-yellow-400 text-black shadow-[0_10px_20px_-5px_rgba(250,204,21,0.5)]';
-    if (c.includes('black') || c.includes('8')) return 'bg-slate-950 shadow-[0_10px_20px_-5px_rgba(0,0,0,0.5)]';
-    return 'bg-emerald-100 text-emerald-900 shadow-lg';
+    if (c.includes('red')) return 'bg-red-600 shadow-md';
+    if (c.includes('yellow')) return 'bg-yellow-400 text-black shadow-md';
+    if (c.includes('black') || c.includes('8')) return 'bg-slate-950 shadow-md';
+    return 'bg-emerald-100 text-emerald-900';
   };
 
   return (
-    <div className={`group relative overflow-hidden rounded-[2.5rem] p-7 mb-8 border transition-all animate-slide-up ${isBest ? 'bg-white border-amber-400 shadow-[0_30px_60px_-12px_rgba(251,191,36,0.3)] ring-1 ring-amber-400/50 scale-[1.03]' : 'bg-white/95 border-emerald-100 shadow-xl shadow-black/10'}`}>
+    <div className={`group relative overflow-hidden rounded-[2rem] p-5 mb-5 border transition-all animate-slide-up ${isBest ? 'bg-white border-amber-400 shadow-xl ring-2 ring-amber-400/20' : 'bg-white/95 border-emerald-100 shadow-lg'}`}>
       {isBest && (
-        <div className="absolute top-0 right-0 bg-amber-500 text-slate-900 text-[10px] font-black px-6 py-2.5 rounded-bl-[1.5rem] uppercase tracking-[0.2em] flex items-center gap-2">
-          <Trophy size={12} fill="currentColor" /> Best Play
+        <div className="absolute top-0 right-0 bg-amber-500 text-slate-900 text-[9px] font-black px-4 py-2 rounded-bl-xl uppercase tracking-widest flex items-center gap-1.5">
+          <Clock size={10} /> Fast Play
         </div>
       )}
       
-      <div className="flex items-center gap-5 mb-6">
-        <div className={`w-16 h-16 rounded-full flex items-center justify-center font-black text-2xl text-white shadow-2xl relative ${getBallStyle(shot.targetBallColor)}`}>
+      <div className="flex items-center gap-4 mb-4">
+        <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-lg text-white relative ${getBallStyle(shot.targetBallColor)}`}>
           {shot.targetBallColor.charAt(0).toUpperCase()}
-          <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/40 rounded-full"></div>
+          <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/30 rounded-full"></div>
         </div>
         <div>
-          <h3 className="text-2xl font-black text-slate-900 tracking-tighter leading-none mb-1.5">{shot.targetBallColor}</h3>
-          <div className="flex items-center gap-1.5 text-slate-400 text-[11px] font-black uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full border border-slate-100 w-fit">
-            <Target size={12} className="text-emerald-500" /> {shot.targetBallLocation}
+          <h3 className="text-xl font-black text-slate-900 tracking-tight leading-none mb-1">{shot.targetBallColor}</h3>
+          <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-black uppercase tracking-wider bg-slate-50 px-2.5 py-1 rounded-full border border-slate-100 w-fit">
+            <Target size={10} className="text-emerald-500" /> {shot.targetBallLocation}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-5 mb-6">
-        <div className="bg-slate-50 p-5 rounded-[1.5rem] border border-slate-100 shadow-sm">
-          <div className="text-[10px] font-black text-emerald-600 uppercase mb-2 tracking-tighter flex items-center gap-1.5">
-            <Sparkles size={14} /> Aim Point
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+          <div className="text-[9px] font-black text-emerald-600 uppercase mb-1 flex items-center gap-1">
+            <Sparkles size={12} /> Aim
           </div>
-          <div className="text-[15px] text-slate-900 font-extrabold leading-tight">{shot.technique.aiming}</div>
+          <div className="text-sm text-slate-900 font-extrabold">{shot.technique.aiming}</div>
         </div>
-        <div className="bg-slate-50 p-5 rounded-[1.5rem] border border-slate-100 shadow-sm">
-          <div className="text-[10px] font-black text-blue-600 uppercase mb-2 tracking-tighter flex items-center gap-1.5">
-            <Zap size={14} /> Spin/English
+        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+          <div className="text-[9px] font-black text-blue-600 uppercase mb-1 flex items-center gap-1">
+            <Zap size={12} /> Spin
           </div>
-          <div className="text-[15px] text-slate-900 font-extrabold leading-tight">{shot.technique.spin}</div>
+          <div className="text-sm text-slate-900 font-extrabold">{shot.technique.spin}</div>
         </div>
       </div>
 
-      <div className="bg-emerald-50/50 p-6 rounded-[1.5rem] mb-6 border border-emerald-100/50 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-1 h-full bg-emerald-400/30"></div>
-        <p className="text-slate-700 text-[15px] font-semibold italic leading-relaxed pl-2">
+      <div className="bg-emerald-50/50 p-4 rounded-2xl mb-4 border border-emerald-100/50">
+        <p className="text-slate-700 text-sm font-bold leading-snug">
           "{shot.reasoning}"
         </p>
       </div>
 
-      <div className="flex items-center justify-between pt-5 border-t border-slate-100 text-[11px] font-black uppercase tracking-widest">
-        <span className="flex items-center gap-2 text-slate-400">
-          <Navigation size={14} className="rotate-45 text-emerald-400" /> {shot.nextShotPlan}
+      <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-[10px] font-black uppercase tracking-wider">
+        <span className="flex items-center gap-1.5 text-slate-400">
+          <Navigation size={12} className="rotate-45 text-emerald-300" /> {shot.nextShotPlan}
         </span>
-        <span className="text-emerald-500 flex items-center gap-1.5 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100">
-          <Zap size={14} fill="currentColor" /> {shot.confidenceScore}% Prob.
+        <span className="text-emerald-500 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
+          {shot.confidenceScore}% Hit
         </span>
       </div>
     </div>
@@ -107,6 +140,7 @@ export default function App() {
   const [hasFoul, setHasFoul] = useState(false);
   const [isCompetitionMode, setIsCompetitionMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSupportModal, setShowSupportModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -117,15 +151,19 @@ export default function App() {
       setIsAnalyzing(true);
       const reader = new FileReader();
       reader.onload = async (e) => {
-        const dataUrl = e.target?.result as string;
-        setImage(dataUrl);
-        const analysis = await analyzePoolTable(dataUrl.split(',')[1], playerSuit, hasFoul, isCompetitionMode);
+        const fullDataUrl = e.target?.result as string;
+        setImage(fullDataUrl);
+        
+        // Fast Pre-process: Compress image to ~1024px before sending to AI
+        const compressedBase64 = await compressImage(fullDataUrl);
+        
+        const analysis = await analyzePoolTable(compressedBase64, playerSuit, hasFoul, isCompetitionMode);
         setResult(analysis);
         setIsAnalyzing(false);
       };
       reader.readAsDataURL(file);
     } catch (err: any) {
-      setError(err.message || "Coach couldn't see the table properly. Try another angle.");
+      setError(err.message || "Timeout! Try again.");
       setIsAnalyzing(false);
     }
   };
@@ -140,151 +178,112 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-emerald-950 text-white font-sans selection:bg-amber-500/30 overflow-x-hidden">
-      <header className="sticky top-0 z-[100] px-6 py-6 flex justify-between items-center glass shadow-2xl">
-        <div className="flex items-center gap-4">
-          <ShinyEightBall size={46} />
-          <div>
-            <h1 className="font-black text-2xl tracking-tighter leading-none italic uppercase">PoolPro</h1>
-            <div className="flex items-center gap-2 mt-1.5">
-              <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${isCompetitionMode ? 'bg-amber-500 text-slate-950' : 'bg-emerald-500 text-white'}`}>
-                {isCompetitionMode ? 'Match' : 'Relaxed'}
-              </span>
+      {/* Support Modal (Donation flow) */}
+      {showSupportModal && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center px-6">
+          <div className="absolute inset-0 bg-emerald-950/90 backdrop-blur-sm" onClick={() => setShowSupportModal(false)}></div>
+          <div className="relative bg-white text-slate-900 w-full max-w-sm rounded-[2.5rem] p-8 animate-slide-up shadow-2xl">
+            <button onClick={() => setShowSupportModal(false)} className="absolute top-6 right-6 text-slate-300"><X size={24} /></button>
+            <div className="text-center space-y-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 text-amber-500 mb-2">
+                <Heart size={32} fill="currentColor" />
+              </div>
+              <h3 className="text-2xl font-black tracking-tight">Support the Coach?</h3>
+              <p className="text-slate-500 text-sm font-medium">Keep the AI sharp with a $1 tip!</p>
+              <div className="space-y-3">
+                <button className="w-full py-4 bg-black text-white rounded-2xl font-black flex items-center justify-center gap-3">
+                  <CreditCard size={18} /> Apple Pay
+                </button>
+                <button className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black">
+                  Credit Card ($1)
+                </button>
+              </div>
             </div>
           </div>
         </div>
+      )}
+
+      <header className="sticky top-0 z-[100] px-6 py-4 flex justify-between items-center glass">
+        <div className="flex items-center gap-3">
+          <ShinyEightBall size={36} />
+          <h1 className="font-black text-xl tracking-tighter italic uppercase">PoolPro</h1>
+        </div>
         {image && (
-          <button onClick={reset} className="w-14 h-14 flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 transition-all active:scale-90 border border-white/10 shadow-xl">
-            <RotateCcw size={24} className="text-emerald-400" />
+          <button onClick={reset} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10">
+            <RotateCcw size={18} className="text-emerald-400" />
           </button>
         )}
       </header>
 
-      <main className="max-w-md mx-auto px-6 py-12">
+      <main className="max-w-md mx-auto px-6 py-8">
         {!image ? (
-          <div className="space-y-14 animate-slide-up">
-            <div className="space-y-6 text-center relative">
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-emerald-400/10 blur-[100px] rounded-full"></div>
-              
-              <div className="relative mb-4 flex justify-center items-center">
-                 <ShinyEightBall size={140} className="z-10" />
-                 <div className="absolute bottom-0 right-1/4 translate-x-1/2 translate-y-1/2 bg-amber-500/10 p-3 rounded-full border border-amber-500/20 z-20">
-                   <Beer size={32} className="text-amber-400" />
+          <div className="space-y-10 animate-slide-up">
+            <div className="space-y-4 text-center">
+              <div className="relative mb-6 flex justify-center items-center">
+                 <ShinyEightBall size={120} className="z-10" />
+                 <div className="absolute bottom-0 right-1/4 translate-x-1/2 translate-y-1/2 bg-amber-500/20 p-2 rounded-full z-20">
+                   <Clock size={24} className="text-amber-400" />
                  </div>
               </div>
-
-              <h2 className="text-[3.5rem] font-black tracking-tighter leading-[0.85] uppercase">
-                Wanna <br /> 
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">win?</span>
+              <h2 className="text-[3rem] font-black tracking-tighter leading-[0.8] uppercase">
+                Ready <br /> <span className="text-amber-400">to win?</span>
               </h2>
-              <p className="text-emerald-400 font-bold text-xl leading-snug">
-                I'll spot the best shots for ya!
-              </p>
             </div>
 
-            <div className="space-y-10 bg-emerald-900/20 p-10 rounded-[3.5rem] border border-white/5 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.6)] backdrop-blur-sm relative">
-              <div className="space-y-5">
-                <div className="bg-emerald-950/80 p-2.5 rounded-[1.75rem] flex border border-white/5 shadow-inner">
-                  <button onClick={() => setIsCompetitionMode(false)} className={`flex-1 py-5 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 ${!isCompetitionMode ? 'bg-emerald-600 shadow-xl text-white' : 'text-emerald-700 hover:text-emerald-500'}`}>
-                    <Beer size={16} /> Relaxed
+            <div className="bg-emerald-900/20 p-8 rounded-[2.5rem] border border-white/5 space-y-8">
+              <div className="flex bg-emerald-950/80 p-1.5 rounded-2xl border border-white/5">
+                <button onClick={() => setIsCompetitionMode(false)} className={`flex-1 py-4 rounded-xl font-black text-xs ${!isCompetitionMode ? 'bg-emerald-600 shadow-lg' : 'text-emerald-800'}`}>RELAXED</button>
+                <button onClick={() => setIsCompetitionMode(true)} className={`flex-1 py-4 rounded-xl font-black text-xs ${isCompetitionMode ? 'bg-amber-500 text-slate-900 shadow-lg' : 'text-emerald-800'}`}>MATCH</button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                {[PlayerSuit.OPEN, PlayerSuit.REDS, PlayerSuit.YELLOWS].map((s) => (
+                  <button key={s} onClick={() => setPlayerSuit(s)} className={`py-4 rounded-xl text-[10px] font-black border transition-all ${playerSuit === s ? 'border-emerald-400 bg-emerald-400/20 text-emerald-400' : 'border-white/5 bg-white/5 text-emerald-700'}`}>
+                    {s}
                   </button>
-                  <button onClick={() => setIsCompetitionMode(true)} className={`flex-1 py-5 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 ${isCompetitionMode ? 'bg-amber-500 text-slate-950 shadow-xl' : 'text-emerald-700 hover:text-emerald-500'}`}>
-                    <Trophy size={16} /> Match
-                  </button>
-                </div>
+                ))}
               </div>
 
-              <div className="space-y-5">
-                <div className="grid grid-cols-3 gap-4">
-                  {[PlayerSuit.OPEN, PlayerSuit.REDS, PlayerSuit.YELLOWS].map((s) => (
-                    <button key={s} onClick={() => setPlayerSuit(s)} className={`py-6 rounded-[1.5rem] text-[11px] font-black border-2 transition-all shadow-lg flex flex-col items-center gap-2 ${playerSuit === s ? 'border-emerald-400 bg-emerald-400/20 text-emerald-400 shadow-[0_0_30px_rgba(52,211,153,0.15)]' : 'border-white/5 bg-white/5 text-emerald-400 opacity-40 hover:opacity-100 hover:bg-white/10'}`}>
-                      {s === PlayerSuit.OPEN ? 'Any Ball' : s}
-                      {playerSuit === s && <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <button onClick={() => setHasFoul(!hasFoul)} className={`w-full p-4 rounded-2xl border flex items-center justify-between ${hasFoul ? 'bg-amber-500/10 border-amber-500' : 'bg-white/5 border-white/5'}`}>
+                <span className="font-black text-sm uppercase">2 Shots Active?</span>
+                <div className={`w-5 h-5 rounded-full border-2 ${hasFoul ? 'bg-amber-500 border-amber-400' : 'border-white/20'}`}></div>
+              </button>
 
-              <div className="space-y-5">
-                <button 
-                  onClick={() => setHasFoul(!hasFoul)} 
-                  className={`w-full p-6 rounded-[1.5rem] border-2 flex items-center justify-between transition-all group shadow-xl ${hasFoul ? 'bg-amber-500/15 border-amber-500/50' : 'bg-white/5 border-white/5 hover:border-white/10'}`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-2xl transition-all shadow-lg ${hasFoul ? 'bg-amber-500 text-slate-950 scale-110 shadow-amber-500/20' : 'bg-white/10 text-emerald-500'}`}>
-                      <Zap size={22} />
-                    </div>
-                    <div className="text-left">
-                      <div className={`font-black text-[15px] leading-none mb-1.5 ${hasFoul ? 'text-amber-500' : 'text-white'}`}>2 Shots?</div>
-                      <div className="text-[10px] font-bold text-emerald-600/60 uppercase tracking-widest">Double Visit Active</div>
-                    </div>
-                  </div>
-                  <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${hasFoul ? 'bg-amber-500 border-amber-400 shadow-lg' : 'border-white/20'}`}>
-                    {hasFoul && <ChevronRight size={16} className="text-slate-950" />}
-                  </div>
-                </button>
-              </div>
-
-              <div className="pt-6">
-                <Button onClick={() => fileInputRef.current?.click()} className="w-full py-8 text-xl" icon={<Camera size={32} />}>GO!</Button>
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" capture="environment" className="hidden" />
-              </div>
+              <Button onClick={() => fileInputRef.current?.click()} className="w-full py-6 text-xl" icon={<Camera size={28} />}>SCAN TABLE</Button>
+              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" capture="environment" className="hidden" />
             </div>
           </div>
         ) : (
-          <div className="space-y-12 animate-slide-up">
-            <div className={`relative rounded-[3.5rem] overflow-hidden border-8 border-emerald-900/50 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)] bg-black aspect-[3/4] ${isAnalyzing ? 'scanning-glow' : ''}`}>
-              <img src={image} className={`w-full h-full object-cover transition-all duration-1000 ${isAnalyzing ? 'scale-125 opacity-30 blur-3xl' : ''}`} />
+          <div className="space-y-8 animate-slide-up">
+            <div className={`relative rounded-[2.5rem] overflow-hidden border-4 border-emerald-900 shadow-2xl bg-black aspect-[4/5] ${isAnalyzing ? 'scanning-glow' : ''}`}>
+              <img src={image} className={`w-full h-full object-cover ${isAnalyzing ? 'opacity-40 blur-md' : ''}`} />
               {isAnalyzing && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center">
-                  <div className="relative mb-10">
-                     <div className="w-28 h-28 border-t-4 border-amber-400 rounded-full animate-spin shadow-[0_0_80px_rgba(251,191,36,0.6)]" />
-                     <ShinyEightBall size={40} className="absolute inset-0 m-auto animate-pulse" />
-                  </div>
-                  <h4 className="font-black text-4xl tracking-tighter mb-4 uppercase">Winning Moves...</h4>
-                  <p className="text-emerald-400 font-bold text-lg opacity-80">Reading the felt for you</p>
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
+                  <div className="w-16 h-16 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mb-4" />
+                  <h4 className="font-black text-2xl uppercase italic">Coach is Thinking...</h4>
                 </div>
               )}
-              {!isAnalyzing && <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>}
             </div>
 
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/30 p-8 rounded-[2.5rem] text-red-200 text-[15px] font-black flex items-center gap-5 shadow-2xl">
-                <AlertTriangle className="text-red-500 shrink-0" size={32} /> 
-                <span>{error}</span>
-              </div>
-            )}
-
             {!isAnalyzing && result && (
-              <div className="space-y-12 pb-24">
-                <div className="bg-gradient-to-br from-emerald-900 to-emerald-950 p-10 rounded-[3rem] border border-white/10 glass shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] relative">
-                  <div className="absolute -top-4 left-10 bg-amber-500 text-slate-900 px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.3em] shadow-xl">The Word</div>
-                  <p className="font-bold text-2xl leading-relaxed text-white italic mt-2">"{result.generalAdvice}"</p>
+              <div className="space-y-6 pb-20">
+                <div className="bg-amber-500 p-5 rounded-[1.5rem] text-slate-950 shadow-xl flex items-center gap-4">
+                  <Clock size={32} className="shrink-0 opacity-50" />
+                  <p className="font-black text-lg leading-tight uppercase italic">{result.generalAdvice}</p>
                 </div>
 
-                <div className="space-y-8">
-                  <label className="text-[11px] font-black text-emerald-500 uppercase tracking-[0.6em] ml-2">Spotted Shots</label>
+                <div className="space-y-4">
                   {result.recommendations.map((shot, i) => (
                     <ShotCard key={i} shot={shot} rank={i} />
                   ))}
                 </div>
 
-                {/* Monetization Placeholder: Affiliate or Sponsor */}
-                <div className="bg-slate-900/40 p-8 rounded-[2.5rem] border border-white/5 space-y-4">
-                  <div className="flex items-center gap-3">
-                    <ShoppingBag size={20} className="text-amber-400" />
-                    <h5 className="font-black text-sm uppercase tracking-widest text-slate-300">Coach's Gear</h5>
-                  </div>
-                  <p className="text-slate-400 text-xs font-medium">Missed that last one? A better cue might help. Check out the pros' favorites.</p>
-                  <button className="w-full py-4 bg-white/5 border border-white/10 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2">
-                    Browse Pro Gear <ChevronRight size={14} />
-                  </button>
-                </div>
-
-                <div className="flex flex-col gap-4">
-                   <Button onClick={reset} variant="secondary" className="w-full py-7" icon={<RotateCcw size={22} />}>New Table Scan</Button>
-                   <button className="flex items-center justify-center gap-2 text-emerald-500/60 font-black text-[10px] uppercase tracking-widest hover:text-emerald-400 transition-all">
-                     <Heart size={12} fill="currentColor" /> Support the Coach
-                   </button>
+                <div className="flex flex-col gap-3">
+                   <Button onClick={reset} variant="secondary" className="w-full py-5 text-sm" icon={<RotateCcw size={18} />}>New Scan</Button>
+                   <div className="flex gap-2">
+                     <button onClick={() => window.open('https://amazon.com', '_blank')} className="flex-1 py-4 bg-white/5 rounded-2xl text-[9px] font-black uppercase tracking-widest border border-white/5">Pro Gear</button>
+                     <button onClick={() => setShowSupportModal(true)} className="flex-1 py-4 bg-white/5 rounded-2xl text-[9px] font-black uppercase tracking-widest border border-white/5">Tip $1</button>
+                   </div>
                 </div>
               </div>
             )}
