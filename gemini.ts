@@ -15,21 +15,21 @@ const responseSchema = {
           technique: {
             type: Type.OBJECT,
             properties: {
-              aiming: { type: Type.STRING },
-              spin: { type: Type.STRING },
+              aiming: { type: Type.STRING, description: "Max 5 words." },
+              spin: { type: Type.STRING, description: "Max 3 words." },
               power: { type: Type.STRING },
               bridge: { type: Type.STRING }
             },
             required: ["aiming", "spin", "power", "bridge"]
           },
-          reasoning: { type: Type.STRING },
-          nextShotPlan: { type: Type.STRING },
+          reasoning: { type: Type.STRING, description: "STRICTLY MAX 12 WORDS. Be witty but fast." },
+          nextShotPlan: { type: Type.STRING, description: "Max 5 words." },
           confidenceScore: { type: Type.NUMBER }
         },
         required: ["targetBallColor", "targetBallLocation", "difficulty", "technique", "reasoning", "nextShotPlan", "confidenceScore"]
       }
     },
-    generalAdvice: { type: Type.STRING }
+    generalAdvice: { type: Type.STRING, description: "Max 10 words summary." }
   },
   required: ["recommendations", "generalAdvice"]
 };
@@ -40,18 +40,22 @@ export const analyzePoolTable = async (
   hasFoul: boolean,
   isCompetitionMode: boolean
 ): Promise<PoolAnalysisResponse> => {
-  // Use named parameter as required by the latest SDK
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const model = "gemini-3-flash-preview"; 
   
   const persona = isCompetitionMode 
-    ? "Master Billiards Coach. Use technical terms like 'tangent lines'."
-    : "Friendly Pool Hall Buddy. Punny and encouraging.";
+    ? "Billiards Pro. Ultra-concise logic. Zero fluff."
+    : "The fast-talking Pool Buddy. Witty, but keeps tips under 10 seconds to read.";
 
   const promptText = `
-    Analyze this pool table. Player is: ${playerSuit}.
-    Foul state: ${hasFoul ? "Active" : "Normal"}.
-    Provide 2-3 shot suggestions in the specified JSON format.
+    ACTION PLAN REQUIRED. 30-second shot clock active.
+    Table Context: ${playerSuit} shooting. ${hasFoul ? "2 Shots/Ball in hand." : "Standard turn."}
+    
+    CRITICAL INSTRUCTIONS:
+    1. Identify the BEST winning path.
+    2. KEEP ALL TEXT EXTREMELY SHORT. No long sentences.
+    3. Use technical terms for Competition, puns for Relaxed.
+    4. Focus on where to hit the cue ball.
   `;
 
   try {
@@ -70,10 +74,10 @@ export const analyzePoolTable = async (
     });
 
     const text = response.text;
-    if (!text) throw new Error("Coach missed the shot. Try another photo.");
+    if (!text) throw new Error("Coach missed the shot.");
     return JSON.parse(text) as PoolAnalysisResponse;
   } catch (error: any) {
-    console.error("Gemini Error:", error);
-    throw new Error("Table analysis failed. Check your lighting!");
+    console.error("Analysis Error:", error);
+    throw new Error("Coach timed out! Try a faster connection or clearer shot.");
   }
 };
